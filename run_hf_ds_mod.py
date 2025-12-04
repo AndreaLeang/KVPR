@@ -259,14 +259,14 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
     print("warmup")
     generate_kwargs_warmup = dict(max_new_tokens=2, do_sample=False)
     with torch.no_grad():
-        output_ids = model.generate(input_ids=input_ids, **generate_kwargs_warmup, cache_implementation="offloaded_static", recompute_len = 32)
+        output_ids = model.generate(input_ids=input_ids, **generate_kwargs_warmup, cache_implementation="offloaded_static", recompute_len = recompute_len )
 
     # Run
     print("benchmark")
     timers("generate-forward").reset()
     generate_kwargs = dict(max_new_tokens=execute_gen_len, do_sample=False)
     with torch.no_grad():
-        output_ids = model.generate(input_ids=input_ids, **generate_kwargs, cache_implementation="offloaded_static")
+        output_ids = model.generate(input_ids=input_ids, **generate_kwargs, cache_implementation="offloaded_static", recompute_len = recompute_len)
     costs = timers("generate-forward").costs
 
     print("done running")
