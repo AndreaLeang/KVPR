@@ -203,7 +203,7 @@ def get_hf_opt_model(model_name, dtype, cpu_offload, disk_offload, offload_dir,
 def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
                    cpu_offload, disk_offload, offload_dir, use_int8,
                    num_nodes, num_gpus_per_node, use_deepspeed, dummy,
-                   output_file, pkl_file, no_log, verbose, recompute_len):
+                   output_file, pkl_file, no_log, verbose, recompute_len, num_of_zig_zag):
     print(f"prompt-len: {args.prompt_len}\n"
         f"gen-len: {args.gen_len}\nbatch-size: {args.batch_size}\n"
         f"pin_memory: {args.pin_memory}\n")
@@ -240,7 +240,10 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
 
     # Run generation
     execute_gen_len = cut_gen_len if cut_gen_len else gen_len
-    prompts = ["Paris is the capital city of"] * batch_size
+    # Total number of prompts: tot_num_of_prompts = num_of_zig_zag * batch_size
+    # width/height of zig-zag = batch_size
+    tot_num_prompts = num_of_zig_zag * batch_size
+    prompts = ["Paris is the capital city of"] * tot_num_prompts
     input_ids = tokenizer(prompts, return_tensors="pt",
                           padding="max_length",
                           max_length=prompt_len).input_ids.cuda()
@@ -271,15 +274,22 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
 
     print("done running")
 
+    #Latency edit: NOT DONE
+    # in FlexGen's generate function 
+                       
+    # Throughput edit: DONE
+    # instead of batch_size, there are now tot_num_prompts for both prefill and decode throughput
     # Log output
     prefill_latency = costs[0]
-    prefill_throughput = batch_size * prompt_len / prefill_latency
+    prefill_throughput = tot_num_prompts * prompt_len / prefill_latency
     if cut_gen_len:  # project latency of cut_gen_len to gen_len
         decode_latency = project_decode_latency(costs, prompt_len, gen_len)
     else:
         decode_latency = sum(costs[1:])
-    decode_throughput = batch_size * (gen_len - 1) / max(decode_latency, 1e-10)
-    num_generated_tokens = batch_size * gen_len
+
+    
+    decode_throughput = tot_num_prompts * (gen_len - 1) / max(decode_latency, 1e-10)
+    num_generated_tokens = tot_num_prompts * gen_len
     total_latency = prefill_latency + decode_latency
     total_throughput = num_generated_tokens / total_latency
     gpu_peak_mem = torch.cuda.max_memory_allocated(torch.device("cuda"))
@@ -358,10 +368,13 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", type=int, default=2)
     parser.add_argument("--recompute-len", type=int, default=0)
     parser.add_argument("--kv-partial", action="store_true")
+    parser.add_argument("--zig-zag-times", type=int, default=1)
     args = parser.parse_args()
 
     # for testing purposes
     args.batch_size = 32
+    args.zig_zag_size = 1
+    
     args.propmt_len = 256
     args.gen_len = 32
     args.kv_parital = True
