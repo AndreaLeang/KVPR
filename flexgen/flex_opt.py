@@ -1709,6 +1709,10 @@ def add_parser_arguments(parser):
     parser.add_argument("--recompute-len", type=int, default=0)
     # Zig-zag addition
     parser.add_argument("--zig-zag-times", type=int, default=1)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    add_parser_arguments(parser)
     args = parser.parse_args()
 
     # for testing purposes
@@ -1728,13 +1732,6 @@ def add_parser_arguments(parser):
     args.csv_file = "optimal_latency_benchmark.csv"
     args.overlap = True
     args.pin_weight = True
-    
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    add_parser_arguments(parser)
-    args = parser.parse_args()
 
     assert len(args.percent) == 6
 
