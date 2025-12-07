@@ -1169,6 +1169,7 @@ class OptLM:
             temperature=temperature,
             stop=stop,
         )
+        print("Using flex_opt.py")
         num_layers = self.num_layers
         num_gpu_batches = self.num_gpu_batches
         gpu_batch_size = self.policy.gpu_batch_size
