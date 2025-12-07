@@ -1,0 +1,6 @@
+pyproject.toml
+flexllmgen.egg-info/PKG-INFO
+flexllmgen.egg-info/SOURCES.txt
+flexllmgen.egg-info/dependency_links.txt
+flexllmgen.egg-info/requires.txt
+flexllmgen.egg-info/top_level.txt
