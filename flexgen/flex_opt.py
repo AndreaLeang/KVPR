@@ -1707,6 +1707,27 @@ def add_parser_arguments(parser):
     parser.add_argument("--cpu-gpu-compute", action="store_true")
     parser.add_argument("--kv-partial", action="store_true")
     parser.add_argument("--recompute-len", type=int, default=0)
+    # Zig-zag addition
+    parser.add_argument("--zig-zag-times", type=int, default=1)
+    args = parser.parse_args()
+
+    # for testing purposes
+    args.model = "facebook/opt-6.7b"
+    args.batch_size = 32
+    args.zig_zag_size = 1
+    
+    args.propmt_len = 256
+    args.gen_len = 32
+    args.gpu_batch_size = 32
+    args.num_gpu_batches = 1
+
+    args.percent = [0, 100, 0, 100, 0, 100]
+    
+    args.kv_parital = True
+    args.csv_file = "optimal_latency_benchmark.csv"
+    args.overlap = True
+    args.pin_weight = True
+    
 
 
 if __name__ == "__main__":
