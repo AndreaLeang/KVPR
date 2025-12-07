@@ -1712,18 +1712,19 @@ def add_parser_arguments(parser):
     args = parser.parse_args()
 
     # for testing purposes
-    args.model = "facebook/opt-6.7b"
+    args.model = "Qwen/Qwen3-8B"
     args.batch_size = 32
     args.zig_zag_size = 1
     
-    args.propmt_len = 256
+    args.propmt_len = 4000
     args.gen_len = 32
     args.gpu_batch_size = 32
-    args.num_gpu_batches = 1
+    args.num_gpu_batches = args.zig_zag_size
 
-    args.percent = [0, 100, 0, 100, 0, 100]
+    # args.percent = [0, 100, 0, 100, 0, 100]
+    args.percent = [0, 100, 55, 45, 0, 100]
     
-    args.kv_parital = True
+    args.kv_partial = True
     args.csv_file = "optimal_latency_benchmark.csv"
     args.overlap = True
     args.pin_weight = True
