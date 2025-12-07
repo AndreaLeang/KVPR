@@ -248,7 +248,10 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
     input_ids = tokenizer(prompts, return_tensors="pt",
                           padding="max_length",
                           max_length=prompt_len).input_ids.cuda()
-    
+    print(input_ids)
+    print(f"num of inputs = {len(input_ids)}")
+    print(model.generate)
+
     opt_config = get_opt_config(args.model)
     if args.kv_partial:
         recompute_len = min(prompt_len, get_optimal_split_point(prompt_len + gen_len, args.batch_size, opt_config.input_dim))
@@ -274,6 +277,8 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
     costs = timers("generate-forward").costs
 
     print("done running")
+    print(output_ids)
+    print(f"num of outputs = {len(output_ids)}")
 
     #Latency edit: NOT DONE
     # in FlexGen's generate function 
@@ -376,7 +381,7 @@ if __name__ == "__main__":
 
     # for testing purposes
     args.batch_size = 32
-    args.zig_zag_size = 1
+    args.zig_zag_size = 2
     
     args.propmt_len = 256
     args.gen_len = 32

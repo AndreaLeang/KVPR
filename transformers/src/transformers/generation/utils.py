@@ -363,7 +363,8 @@ class GenerationMixin:
         See the forward pass in the model documentation for expected arguments (different models might have different
         requirements for e.g. `past_key_values`). This function should work as is for most LLMs.
         """
-
+        
+        print("using GenerationMixin's prepare_inputs_for_generation")
         # 1. Handle BC:
         model_inputs = {}
         # - some models don't have `Cache` support (which implies they don't expect `cache_position` in `forward`)
@@ -1986,6 +1987,7 @@ class GenerationMixin:
                     - [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
 
+        print("GenerationMixin's generate")
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
         self._validate_model_class()
         tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
