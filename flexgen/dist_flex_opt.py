@@ -31,6 +31,7 @@ class DistOptLM(OptLM):
     def __init__(self, config, env, path, policy, pipeline_rank,
                  num_pipeline_stages, comm_device, num_inner_iterations=None,
                  async_comm=False):
+        print("using dist_opt_lm")
         self.config = config
         self.env = env
         self.path = path
@@ -307,7 +308,8 @@ class DistOptLM(OptLM):
             temperature=temperature,
             stop=stop,
         )
-        assert stop is None, "Not implemented."
+        assert stop is None, "Not implemented.i"
+        print("using dist's gnerate")
         num_pipeline_stages = self.num_pipeline_stages
         num_layers = self.num_layers
         num_gpu_batches = self.num_gpu_batches

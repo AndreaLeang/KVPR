@@ -235,9 +235,10 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
     print("load model")
     
     print("correct, using huggingface model")
+    
     model = get_hf_opt_model(model_name, dtype, cpu_offload, disk_offload,
             offload_dir, num_gpus_per_node, dummy_weights)
-
+    print(type(model))
     # Run generation
     execute_gen_len = cut_gen_len if cut_gen_len else gen_len
     # Total number of prompts: tot_num_of_prompts = num_of_zig_zag * batch_size
@@ -295,6 +296,8 @@ def run_generation(model_name, batch_size, prompt_len, gen_len, cut_gen_len,
     gpu_peak_mem = torch.cuda.max_memory_allocated(torch.device("cuda"))
     out_str = ""
 
+
+    # Done
     if verbose >= 2:
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
         show_str = "Outputs:\n" + 70 * '-' + "\n"
@@ -398,4 +401,4 @@ if __name__ == "__main__":
                    "~",
                    args.int8, num_nodes, num_gpus_per_node, use_deepspeed,
                    args.dummy, args.log_file, args.pkl_file,
-                   args.no_log, args.verbose, args.recompute_len)
+                   args.no_log, args.verbose, args.recompute_len, args.zig_zag_size)
