@@ -6,6 +6,7 @@ import functools
 import gc
 import math
 import os
+from pathlib import Path
 from typing import Tuple, Union, Optional, Any, Sequence, List
 
 import numpy as np
@@ -291,8 +292,10 @@ def write_csv_log(filename, args, model_size, cache_size, hidden_size,
     "hidden_size", "gpu_peak_mem", "prefill_latency", "prefill_throughput",
     "decode_latency", "decode_throughput", "total_latency", "total_throughput"]
 
+    CUR_DIR = Path(__file__).parent.parent.parent.absolute() / "final_proj"
+    filename = os.path.join(CUR_DIR, filename)
     with open(filename, mode="a", newline="\n") as file:
-        writer = csv.writer(file, delimiter='\t')
+        writer = csv.writer(file, delimiter=',')
         if os.stat(filename).st_size == 0:
             writer.writerow(column_names)
         data = [f"{model_size/GB:.3f}", args.gpu_batch_size, args.num_gpu_batches, args.prompt_len,
