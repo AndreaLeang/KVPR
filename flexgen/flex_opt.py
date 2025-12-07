@@ -8,6 +8,7 @@ import dataclasses
 import os
 import pickle
 import time
+from pathlib import Path
 from typing import Union, List, Optional
 
 import numpy as np
@@ -1569,7 +1570,10 @@ def run_flexgen(args):
         warmup_inputs = get_test_inputs(256, num_prompts, tokenizer)
         inputs = get_test_inputs(prompt_len, num_prompts, tokenizer)
 
-        
+        device_info = {
+            'cpu': True,
+            'cuda': torch.cuda.is_available(),
+        } 
         activities = [ProfilerActivity.CPU]
         if device_info['cuda']:
             activities.append(ProfilerActivity.CUDA)
@@ -1629,7 +1633,8 @@ def run_flexgen(args):
                     debug_mode=args.debug_mode, cut_gen_len=cut_gen_len, verbose=args.verbose)
 
             trace_filename = f"LD40s_facebook_zigzagwidth_{args.num_gpu_batches}_batchSize_{args.gpu_batch_size}_trace.json"
-            full_path_trace = os.path.join("~/final_proj", trace_filename)
+            CUR_DIR = Path(__file__).parent.parent.parent.absolute() / "final_proj"
+            full_path_trace = os.path.join(CUR_DIR, trace_filename)
             prof.export_chrome_trace(full_path_trace)
 
             costs = timers("generate").costs
