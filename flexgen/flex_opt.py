@@ -13,6 +13,7 @@ from typing import Union, List, Optional
 import numpy as np
 from tqdm import tqdm
 import torch
+from torch.profiler import profile, record_function, ProfilerActivity
 from transformers import AutoTokenizer
 import torch.nn.functional as F
 
@@ -1215,6 +1216,7 @@ class OptLM:
         if self.policy.cpu_cache_compute or self.cpu_gpu_compute:
             self.env.cpu.init_attention_compute_workspace(self.config, self.task, self.policy)
 
+    
         # Generate
         if debug_mode is None:
             if not overlap:
@@ -1567,6 +1569,11 @@ def run_flexgen(args):
         warmup_inputs = get_test_inputs(256, num_prompts, tokenizer)
         inputs = get_test_inputs(prompt_len, num_prompts, tokenizer)
 
+        
+        activities = [ProfilerActivity.CPU]
+        if device_info['cuda']:
+            activities.append(ProfilerActivity.CUDA)
+
         gpu = TorchDevice("cuda:0")
         cpu = TorchDevice("cpu")
         disk = TorchDisk(args.offload_dir)
@@ -1609,10 +1616,21 @@ def run_flexgen(args):
 
             print("benchmark - generate")
             timers("generate").reset()
-            
-            output_ids = model.generate(
-                inputs, max_new_tokens=args.gen_len,
-                debug_mode=args.debug_mode, cut_gen_len=cut_gen_len, verbose=args.verbose)
+
+            with profile(
+                activities=activities,
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=True,
+                with_modules=True
+            ) as prof:
+                output_ids = model.generate(
+                    inputs, max_new_tokens=args.gen_len,
+                    debug_mode=args.debug_mode, cut_gen_len=cut_gen_len, verbose=args.verbose)
+
+            trace_filename = f"LD40s_facebook_zigzagwidth_{args.num_gpu_batches}_batchSize_{args.gpu_batch_size}_trace.json"
+            full_path_trace = os.path.join("~/final_proj", trace_filename)
+            prof.export_chrome_trace(full_path_trace)
 
             costs = timers("generate").costs
         finally:
