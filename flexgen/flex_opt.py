@@ -1225,6 +1225,7 @@ class OptLM:
                 if num_gpu_batches == 1:
                     self.generation_loop_overlap_single_batch()
                 else:
+                    print("doing multi batch")
                     self.generation_loop_overlap_multi_batch()
         elif debug_mode == "fewer_batch":
             # Run fewer layeres and batches for debugging
@@ -1716,17 +1717,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # for testing purposes
-    args.model = "Qwen/Qwen3-8B"
+    args.model = "facebook/opt-6.7b"
     args.batch_size = 32
-    args.zig_zag_size = 1
+    args.zig_zag_size = 2
     
-    args.propmt_len = 4000
+    args.prompt_len = 256
     args.gen_len = 32
+    
+    # Total number of prompts = num_gpu_batches *gpu_batch_size 
     args.gpu_batch_size = 32
-    args.num_gpu_batches = args.zig_zag_size
 
-    # args.percent = [0, 100, 0, 100, 0, 100]
-    args.percent = [0, 100, 55, 45, 0, 100]
+    # zig-zag width vraiable
+    args.num_gpu_batches = 1
+
+    args.percent = [0, 100, 0, 100, 0, 100]
+    # args.percent = [0, 100, 55, 45, 0, 100]
     
     args.kv_partial = True
     args.csv_file = "optimal_latency_benchmark.csv"
