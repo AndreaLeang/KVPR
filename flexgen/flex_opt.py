@@ -1632,7 +1632,7 @@ def run_flexgen(args):
                     inputs, max_new_tokens=args.gen_len,
                     debug_mode=args.debug_mode, cut_gen_len=cut_gen_len, verbose=args.verbose)
 
-            trace_filename = f"L40s_facebook_m_zigzagwidth_{args.num_gpu_batches}_batchSize_{args.gpu_batch_size}_trace.json"
+            trace_filename = f"L40s_facebook_m_zigzagnum_{args.num_gpu_batches}_batchSize_{args.gpu_batch_size}_trace.json"
             CUR_DIR = Path(__file__).parent.parent.parent.absolute() / "final_proj"
             full_path_trace = os.path.join(CUR_DIR, trace_filename)
             prof.export_chrome_trace(full_path_trace)
@@ -1747,10 +1747,10 @@ if __name__ == "__main__":
     args.prompt_len = 256
     args.gen_len = 32
     
-    const_total_prompts = 16
+    const_total_prompts = 64
 
     # Total number of prompts = num_gpu_batches *gpu_batch_size 
-    args.gpu_batch_size = 2
+    args.gpu_batch_size = 8
 
     # zig-zag number  vraiable
     args.num_gpu_batches = 8
@@ -1759,7 +1759,7 @@ if __name__ == "__main__":
     # args.percent = [0, 100, 55, 45, 0, 100]
     
     args.kv_partial = True
-    args.csv_file = "optimal_latency_benchmark_L40s_tot_16_all_cpu.csv"
+    args.csv_file = "optimal_latency_benchmark_L40s_tot_64_all_cpu.csv"
     args.overlap = True
     args.pin_weight = True
 
