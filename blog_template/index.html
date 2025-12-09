@@ -300,9 +300,9 @@
 
 					<br><br>
 					A further improvement on KV caching involves loading part of the KV cache onto the GPU, while simultaneously recomputing the rest of the cache. This has the benefit of avoiding GPU idle time, 
-					when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in <a href="#KVPR">[4]</a>.
+					when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency.
 					 In this blog, we will expand on the approach taken in the KVPR paper, which has a schedule-independent improvement; with this predictable KV cache offloading strategy as a basis, we can explore the
-					 influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules. 
+					 influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules<a href="#KVPR">[4]</a>. 
 
 		    </div>
 		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
@@ -319,20 +319,20 @@
 			(namely, row-by-row and column-by-column) by generalizing the full column-by-column schedule as shown in Figure 2.
 			<br><br>
 			<center>
-				<img src="./images/zig_zag_schedule.png" width=256px/>
+				<img src="./images/zig_zag_schedule.png" width=512px/>
 				Figure 2: Zig-zag scheduling <a href="#ZvLLM">[5]</a>
 			</center>
 			<br><br>
-			As shown in Figure 2, the zig-zag schedule processes batches at a time. For each batch, it looks at the first layer of all the 
-			sequences in that batch, loads the relevant caches and weights onto the GPU in parallel, then moves on to the next layer of this batch. 
-			Upon finishing with these batches it then proceeds to the next batch. This method improves the throughput of the scheduling, as multiple 
+			As shown in Figure 2, the zig-zag schedule processes blocks at a time. For each block, it looks at the first layer of all the 
+			sequences in that block, loads the relevant caches and weights onto the GPU in parallel, then moves on to the next layers of this block. 
+			Upon finishing with these sequences it then proceeds to the next block. This method improves the throughput of the scheduling, as multiple 
 			sequences are processed in parallel; however, the tradeoff is that the latency is worse. 
 			<br><br>
 			Under this interpretation, the row-by-row scheduling in the KVPR paper can be interpreted as an extreme version of the zig-zag scheduling, 
-			with a batch size of one. The column-by-column scheduling is the other end of the extreme, with a single batch of maximal possible size 
+			with a block size of one. The column-by-column scheduling is the other end of the extreme, with a single block of maximal possible size 
 			equal to the number of sequences processed. 
 			<br><br>	
-			However, there is no mention of the specific experiment values of this zig-zag strategy, such as block size, total number of batches, etc. 
+			However, there is no mention of the specific experiment values of this zig-zag strategy, such as block size, total number of blocks, etc. 
 			Our experiment fills in this gap, and explores in more depth how the latency and throughput change as we vary different parameters. This 
 			analysis allows us to look at the tradeoff between latency and throughput, so that potential users can adapt their scheduling process based 
 			on how important these two factors are to them.
@@ -341,8 +341,9 @@
 			the changes in latency and throughput are caused purely by the changes in scheduling. 
 			<br><br>
 			During our initial experiments, we kept the total number of prompts, prompt length, generation length, and other parameters of KVPR fixed, 
-			effectively only changing the number of blocks and block size with each test. We run these experiments over several different values for 
-			the number of sequences (8, 16, 32, 64) and record the latency and throughput. In the next section, we then look at the results when varying other 
+			effectively only changing the number of blocks and block size with each test. We fix that each batch contains a single sequence to simplify 
+			the experiment, so for the following analysis, a batch refers to a block. We run these experiments over several different values for the 
+			number of sequences (4, 8, 16, 32, 64) and record the latency and throughput. In the next section, we then look at the results when varying other 
 			parameters like prompt and generation length, to see if any initial trends we observed stay consistent. 
 			<br><br>
 			All experiments were run on Google Colab Pro using an A100 GPU, on the high RAM option, which has more than sufficient RAM compared to
