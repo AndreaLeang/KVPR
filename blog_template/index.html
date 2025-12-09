@@ -257,8 +257,7 @@
 
 
 			</div>
-			<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
-				  </div>
+			<div class="margin-right-block" style="transform: translate(0%, -100%);"></div>
 		</div>
 
 		<div class="content-margin-container" id="kv_cache_offloading_strategies">
@@ -287,14 +286,60 @@
 					<br><br>
 					A further improvement on KV caching involves loading part of the KV cache onto the GPU, while simultaneously recomputing the rest of the cache. This has the benefit of avoiding GPU idle time, when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in [KVPR, Both]. In this blog, we will expand on the approach taken in the KVPR paper, which has a schedule-independent improvement; with this predictable KV cache offloading strategy as a basis, we can explore the influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules. 
 
-					
-          
-          
 		    </div>
 		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
-          Interestingly, Plato also asked if X does Y, in <a href="#ref_1">[1]</a>.
 		    </div>
 		</div>
+
+		<div class="content-margin-container" id="Experiment Method">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+			<h1>Experiment Method</h1>
+			We chose to design our experiment to fairly compare different scheduling strategies, which led us to take inspiration from the 
+			“zig-zag” scheduling described in ZvLLM <a href="#ZvLLM">[5]</a>. ZvLLM expands upon the two scheduling strategies mentioned in KVPR 
+			(namely, row-by-row and column-by-column) by generalizing the full column-by-column schedule as shown in Figure 2.
+			<br><br>
+			<center>
+				<img src="./images/zig_zag_schedule.png" width=256px/>
+				Figure 2: Zig-zag scheduling <a href="#ZvLLM">[5]</a>
+			</center>
+			<br><br>
+			As shown in Figure 2, the zig-zag schedule processes batches at a time. For each batch, it looks at the first layer of all the 
+			sequences in that batch, loads the relevant caches and weights onto the GPU in parallel, then moves on to the next layer of this batch. 
+			Upon finishing with these batches it then proceeds to the next batch. This method improves the throughput of the scheduling, as multiple 
+			sequences are processed in parallel; however, the tradeoff is that the latency is worse. 
+			<br><br>
+			Under this interpretation, the row-by-row scheduling in the KVPR paper can be interpreted as an extreme version of the zig-zag scheduling, 
+			with a batch size of one. The column-by-column scheduling is the other end of the extreme, with a single batch of maximal possible size 
+			equal to the number of sequences processed. 
+			<br><br>	
+			However, there is no mention of the specific experiment values of this zig-zag strategy, such as block size, total number of batches, etc. 
+			Our experiment fills in this gap, and explores in more depth how the latency and throughput change as we vary different parameters. This 
+			analysis allows us to look at the tradeoff between latency and throughput, so that potential users can adapt their scheduling process based 
+			on how important these two factors are to them.
+			<br><br>
+			Since KVPR is independent of scheduling, we utilized it as the base offloading strategy for each zigzag block. This foundation ensures that 
+			the changes in latency and throughput are caused purely by the changes in scheduling. 
+			<br><br>
+			During our initial experiments, we kept the total number of prompts, prompt length, generation length, and other parameters of KVPR fixed, 
+			effectively only changing the number of blocks and block size with each test. We run these experiments over several different values for 
+			the number of sequences (8, 16, 32, 64) and record the latency and throughput. In section we then look at the results when varying other 
+			parameters like prompt and generation length, to see if any initial trends we observed stay consistent. 
+			<br><br>
+			All experiments were run on Google Collab Pro using an A100 GPU, on the high RAM option, which typically has around 80-90 GB, 
+			far exceeding the amounts we needed for our experiments.
+			<br><br>
+
+		</div>
+		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
+		</div>
+	</div>
+
+
+
+
+
 
 		<div class="content-margin-container">
 				<div class="margin-left-block">
@@ -318,8 +363,8 @@
 						<h1>Implications and limitations</h1>
 						Let's end with some discussion of the implications and limitations.
 		    </div>
-		    <div class="margin-right-block">
-		    </div>
+		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> 
+			</div>
 		</div>
 
 		<div class="content-margin-container" id="citations">
@@ -333,7 +378,8 @@
 								KVCache Offloading via Algorithm-System Co-Design</a>, Yi et al., 2025<br><br>
 							<a id="ASnyc"></a>[3] <a href="https://arxiv.org/pdf/2504.06319">Accelerating LLM Inference Throughput
 								via Asynchronous KV Cache Prefetching</a>, Dong et al., 2025<br><br>
-							<a id="KVPR"></a>[3] <a href="https://arxiv.org/pdf/2411.17089">KVPR: Efficient LLM Inference with I/O-Aware KV Cache Partial Recomputation</a>, Jiang et al., 2025<br><br>
+							<a id="KVPR"></a>[4] <a href="https://arxiv.org/pdf/2411.17089">KVPR: Efficient LLM Inference with I/O-Aware KV Cache Partial Recomputation</a>, Jiang et al., 2025<br><br>
+							<a id="ZvLLM"></a>[5] <a href="https://adiprerepa.github.io/data/598final.pdf">ZvLLM: Zigzag forward pass with vLLM</a>, Zhu et al., 2025<br><br>
 							<a id="ref_2"></a>[2] <a href="">A Human-Level AGI</a>, OpenAI, 2025<br><br>
 						</div>
 		    </div>
