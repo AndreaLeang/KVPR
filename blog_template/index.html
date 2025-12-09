@@ -214,9 +214,9 @@
 									<td colspan=4 align=left><span style="font-size:18px">Final project for 6.7960, MIT</span></td>
 								</tr>
 						</table>
-					</div>
-					<div class="margin-right-block">
-					</div>
+				</div>
+				<div class="margin-right-block" style="transform: translate(0%, -100%);"></div>
+				
 		</div>
 
 		<div class="content-margin-container" id="intro">
@@ -225,62 +225,71 @@
           <div style="position:fixed; max-width:inherit; top:max(20%,120px)">
               <b style="font-size:16px">Outline</b><br><br>
               <a href="#intro">Introduction</a><br><br>
-              <a href="#does_x_do_y">Does X do Y?</a><br><br>
+              <a href="#kv_cache_offloading_strategies">KV Cache Offloading Strategies</a><br><br>
               <a href="#implications_and_limitations">Implications and limitations</a><br><br>
           </div>
 				</div>
 		    <div class="main-content-block">
             <!--You can embed an image like this:-->
-            <img src="./images/your_image_here.png" width=512px/>
 		    </div>
-		    <div class="margin-right-block">
-						Caption for the image.
-		    </div>
+			<div class="margin-right-block" style="transform: translate(0%, -100%);"></div>
 		</div>
 
     <div class="content-margin-container" id="intro">
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
-						<h1>Introduction</h1>
-            In training large language models (LLMs), generating a token uses self-attention <a href="#ref_1">[1]</a>,  
-		    </div>
-		    <div class="margin-right-block">
-						Margin note that clarifies some detail #main-content-block for intro section.
-		    </div>
+				<h1>Introduction</h1>
+				Large language models (LLMs) are deep learning models that often utilize self-attention, where generating a single token requires attending to all previously 
+				generated tokens <a href="#Viswani">[1]</a>. This generally requires quadratic computation complexity due to 
+				having to revisit previous tokens. As the number of tokens generated increases, the memory and time required 
+				to generate the next token becomes a significant problem in the training and testing process of LLMs.
+				<br><br>
+				The demands on LLMs have grown non-stop: faster results, longer answers, and harder problems. To accommodate the appetite of the masses, current models and the contexts they are given have been growing exponentially in size. The increased model sizes allow for more minute details to be finetuned. The longer contexts come from the increased amount of information needed to solve the harder problems and the long back and forth chats, where the model is expected to remember every detail of what has been said so far. The amount of shared memory between prompts also increases to help the models speed up computation, allowing them to transfer less information during training.
+				<br><br>
+				With their immense growing sizes, the model, its context/prompts, and the subsequently generated values can no longer all fit on a single GPU. Real-world models are now shifting towards a “heterogeneous” solution, where part of the data is saved on the CPU and moved to the GPU as needed. 
+				<br><br>
+				One crucial case is KV cache: intermediate computation results during LLM inference saved or “cached” to avoid recomputation in the popular transformer models. KV cache scales linearly with token generation and currently dominates the memory footprint for long-context inference, exceeding the current GPU memory capacity. 
+				<br><br>
+				However, due to the sheer amount of KV cache generated during inference, the offloading of KV cache onto the CPU becomes a new bottleneck in power and performance: what originally was data movement within the GPU now requires extra time and power in moving immense amounts of KV cache back to the CPU to continue token generation. Because token generation occurs in the GPU, the model weights must be stored in the GPU during each training cycle, leaving only a certain amount of space available for the KV cache on the GPU. But the increasing size of the models mean that model weights take up more space while KV caches also require more and more GPU space for increased efficiency. As such, there is a bottleneck for the available space in the GPU.
+				<br><br>
+				To face this great bottleneck, researchers have developed different KV cache offloading strategies to hide the induced latency. 
+
+
+			</div>
+			<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
+				  </div>
 		</div>
 
-		<div class="content-margin-container" id="does_x_do_y">
+		<div class="content-margin-container" id="kv_cache_offloading_strategies">
 				<div class="margin-left-block">
 				</div>
 		    <div class="main-content-block">
-					<h1>Does X do Y?</h1>
-				  It is well known that Y does Y. And this has raised the question does X do Y? Because if Y does Y then it stands to reason that X does Y.
-          But we cannot answer this until we realize the Z implies Y and X can be linked to Z.<br><br>
+					<h1>KV Cache Offloading Strategies</h1>
 
-          Now let's write some math!<br>
-          <center>
-            <math xmlns="http://www.w3.org/1998/Math/MathML">
-              <mrow>
-                <mrow>
-                  <mo>&#x2202;</mo>
-                  <mi>y</mi>
-                </mrow>
-                <mo>/</mo>
-                <mrow>
-                  <mo>&#x2202;</mo>
-                  <mi>x</mi>
-                </mrow>
-              </mrow>
-              <mo>=</mo>
-              <mi>x</mi>
-            </math>
-          </center>
-          <br>
-          It's probably best to ask an LLM to help do the web
-          formatting for math. You can tell it "convert this latex equation into MathML: $$\frac{\partial dy}{\partial dx} = x$$"
-          But it took me a few tries. So, if you get frustrated, you can embed an image of the equation, or use other packages for
-          rendering equations on webpages.
+					A common KV cache offloading strategy to emerge is scheduling when KV cache is 
+					loaded from the CPU by predicting which KV cache will be used next and prefetching them. 
+					This reduces the time that the GPU is stalled, waiting for the KV cache, but this prediction may result in “cache misses” 
+					when the predictor mispredicts where the needed KV cache block is, i.e. if the KV cache isn’t on the GPU because it was not prefetched 
+					fast enough <a href="#CLO">[2]</a>, or the wrong KV cache block prefetched <a href="#Async">[3]</a>. This misprediction introduces new overhead in either refetching or 
+					recomputing the needed KV cache. While these strategies introduce an ideal cache hit rate, different workloads and batching may result in 
+					different experienced cache hit rates, making it hard to reliably calculate latency and power <a href="#CLO">[2,3]</a>.
+					<br><br>
+					Other scheduling strategies look at a bigger picture: changing the order that layers will be processed in batches. Two prominent schedules are row-by-row, aiming to minimize 
+					latency by trying to get the first tokens out as soon as possible, and column-by-column, maximizing throughput by loading multiple KV 
+					caches at once to process multiple sequences in parallel, as shown in Figure 1.
+					<br><br>
+					<center>
+						<img src="./images/rbr_and_cbc.png" width=256px/>
+						Figure 1: Row-by-row and column-by-column schedules <a href="#KVPR">[4]</a>
+					</center>
+
+					<br><br>
+					A further improvement on KV caching involves loading part of the KV cache onto the GPU, while simultaneously recomputing the rest of the cache. This has the benefit of avoiding GPU idle time, when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in [KVPR, Both]. In this blog, we will expand on the approach taken in the KVPR paper, which has a schedule-independent improvement; with this predictable KV cache offloading strategy as a basis, we can explore the influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules. 
+
+					
+          
+          
 		    </div>
 		    <div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
           Interestingly, Plato also asked if X does Y, in <a href="#ref_1">[1]</a>.
@@ -319,7 +328,12 @@
 		    <div class="main-content-block">
 						<div class='citation' id="references" style="height:auto"><br>
 							<span style="font-size:16px">References:</span><br><br>
-							<a id="ref_1"></a>[1] <a href="https://arxiv.org/pdf/1706.03762">Attention Is All You Need</a>, Viswani et al., 2017<br><br>
+							<a id="Viswani"></a>[1] <a href="https://arxiv.org/pdf/1706.03762">Attention Is All You Need</a>, Viswani et al., 2017<br><br>
+							<a id="CLO"></a>[2] <a href="https://arxiv.org/abs/2504.06319">CLO: Efficient LLM Inference System with CPU-Light
+								KVCache Offloading via Algorithm-System Co-Design</a>, Yi et al., 2025<br><br>
+							<a id="ASnyc"></a>[3] <a href="https://arxiv.org/pdf/2504.06319">Accelerating LLM Inference Throughput
+								via Asynchronous KV Cache Prefetching</a>, Dong et al., 2025<br><br>
+							<a id="KVPR"></a>[3] <a href="https://arxiv.org/pdf/2411.17089">KVPR: Efficient LLM Inference with I/O-Aware KV Cache Partial Recomputation</a>, Jiang et al., 2025<br><br>
 							<a id="ref_2"></a>[2] <a href="">A Human-Level AGI</a>, OpenAI, 2025<br><br>
 						</div>
 		    </div>
