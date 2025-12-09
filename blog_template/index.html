@@ -375,12 +375,50 @@
 			GPU resources can be devoted to processing that particular sequence.
 			<br><br>
 			Additionally, as we look at different values for the number of sequences considered, the change in total latency as batch size increases tends to become more extreme when the number of sequences goes up. This is because we only need to load model weights onto the GPU once per batch, so the number of times we do this load is proportional to the batch size. For example, as we go from batch size one (i.e., row-by-row scheduling) to batch size two, the number of model weight loadings goes from N to N / 2, where N is the total number of sequences; so the improvement in total latency resulting from this improvement is proportional to N. Because the model weights are relatively large in memory, the effect this has on the overall latency is large, and this trend is reflected in latency_improvement.jpg, where we can observe a roughly linear relationship between N and the improvement in latency when going from batch size of one to batch size of two.
-			
-
+			<br><br>
+			Furthermore, we can see in Figure 6 that the general trends of latency and throughput versus batch size does not depend on generation length 
+			or scheduling length, so these results are applicable to a variety of different use cases. Any small variances can likely be attributed to 
+			physical hardware limitations and differences. We can also observe some other trends in this figure. The throughput tends to go down when 
+			prompt length does, but it is mostly independent of generation length. This is because throughput heavily depends on prompt length, since 
+			the prompt length is significantly larger than generation length and as such it is the primary factor in KV cache size, which affects the 
+			throughput here. Additionally, because throughput is tokens generated per second, increasing prompt length does not increase tokens generated 
+			while it does increase time, so throughput gets higher. In contrast, increasing generation length does not affect KV cache size by as much, 
+			and also increases the tokens generated in proportion to the time, so throughput is mostly constant.
+			<br><br>
+			<center>
+				<img src="./images/lat_thr_combined.png" width=1024px/>
+				Figure 6: GPU Batch Size vs. Latency and Throughput
+			</center>
+			<br><br>
+			If we look at the total latency, we can see it tends to go up as either prompt length or generation length does. It’s fairly linear with 
+			respect to the generated length given a fixed prompt length, as we might expect, since the number of multiplications per sequence is a linear 
+			function of the generated length. But if we fix the generated length and let the prompt length vary, we note that although the latency increases 
+			when prompt length does, this relationship is not linear. This is likely due to the fact that the number of layers is unchanged, so there is no 
+			increase in latency there, but the significant increase in KV cache size caused by the longer prompt leads each layer to be slower by a sub-linear factor. 
+			<br><br>
+			Prior to using Google Colab to run our experiments, we tried to use MIT’s Engaging-On-Demand cluster, which also provides custom GPUs on which we can 
+			run our models. Figure 7 shows the results from using Engaging’s L40 GPUs. We observe similar trends to what we found on Colab: the latency per sequence 
+			increases linearly with GPU batch size while throughput goes through a sub-logarithmic growth. However, we noticed there are inconsistencies in our 
+			results with Engaging. Between 16 and 32 sequences, we noticed that the average total latency actually went down, which does not make sense since more 
+			sequences would require more time to attend to and thus more latency. We also noticed that the general trend did not hold for 64 sequences, where the 
+			total throughput for batch sizes 32 and 64 were lower than the throughput for batch size 16, and the total latency was also higher.
+			<br><br>
+			<center>
+				<img src="./images/combined_3_bars_andrea.png" width=1024px/>
+				Figure 7: Engaging Results: GPU Batch Size vs Latency and Throughput
+			</center>
+			<br><br>
+			Upon investigation, Engaging is a service that allocates jobs to the resources it has, which can result in multiple jobs being assigned to the same GPU. 
+			This causes contention in both memory and GPU computation resources. The trials out of the trend, mentioned before, were indeed found to be run with other 
+			processes on the same GPU. Because we did not have access to the whole GPU, there were differences between latency and throughput values proportional to 
+			how much of a GPU our jobs were assigned, even for trials with the same number of sequences. The smaller variances in these values recorded against the 
+			Colab results could also be due to the different GPUs’ computation capabilities, with the A100 being able to run processes faster in general.
 		</div>
 		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
 		</div>
 	</div>
+
+	
 	
 
 	<div class="content-margin-container" id="Discussion">
