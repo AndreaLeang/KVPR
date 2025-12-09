@@ -226,7 +226,9 @@
               <b style="font-size:16px">Outline</b><br><br>
               <a href="#intro">Introduction</a><br><br>
               <a href="#kv_cache_offloading_strategies">KV Cache Offloading Strategies</a><br><br>
-              <a href="#implications_and_limitations">Implications and limitations</a><br><br>
+              <a href="#Discussion">Discussion</a><br><br>
+			  <a href="#Limitations">Limitations</a><br><br>
+			  <a href="#Future Work">Future Work</a><br><br>
           </div>
 				</div>
 		    <div class="main-content-block">
@@ -245,13 +247,23 @@
 				having to revisit previous tokens. As the number of tokens generated increases, the memory and time required 
 				to generate the next token becomes a significant problem in the training and testing process of LLMs.
 				<br><br>
-				The demands on LLMs have grown non-stop: faster results, longer answers, and harder problems. To accommodate the appetite of the masses, current models and the contexts they are given have been growing exponentially in size. The increased model sizes allow for more minute details to be finetuned. The longer contexts come from the increased amount of information needed to solve the harder problems and the long back and forth chats, where the model is expected to remember every detail of what has been said so far. The amount of shared memory between prompts also increases to help the models speed up computation, allowing them to transfer less information during training.
+				The demands on LLMs have grown non-stop: faster results, longer answers, and harder problems. To accommodate the appetite of the masses, current models and 
+				the contexts they are given have been growing exponentially in size. The increased model sizes allow for more minute details to be finetuned. The longer contexts 
+				come from the increased amount of information needed to solve the harder problems and the long back and forth chats, where the model is expected to remember every 
+				detail of what has been said so far. The amount of shared memory between prompts also increases to help the models speed up computation, allowing them to transfer 
+				less information during training.
 				<br><br>
-				With their immense growing sizes, the model, its context/prompts, and the subsequently generated values can no longer all fit on a single GPU. Real-world models are now shifting towards a “heterogeneous” solution, where part of the data is saved on the CPU and moved to the GPU as needed. 
+				With their immense growing sizes, the model, its context/prompts, and the subsequently generated values can no longer all fit on a single GPU. Real-world models 
+				are now shifting towards a “heterogeneous” solution, where part of the data is saved on the CPU and moved to the GPU as needed. 
 				<br><br>
-				One crucial case is KV cache: intermediate computation results during LLM inference saved or “cached” to avoid recomputation in the popular transformer models. KV cache scales linearly with token generation and currently dominates the memory footprint for long-context inference, exceeding the current GPU memory capacity. 
+				One crucial case is KV cache: intermediate computation results during LLM inference saved or “cached” to avoid recomputation in the popular transformer models. 
+				KV cache scales linearly with token generation and currently dominates the memory footprint for long-context inference, exceeding the current GPU memory capacity. 
 				<br><br>
-				However, due to the sheer amount of KV cache generated during inference, the offloading of KV cache onto the CPU becomes a new bottleneck in power and performance: what originally was data movement within the GPU now requires extra time and power in moving immense amounts of KV cache back to the CPU to continue token generation. Because token generation occurs in the GPU, the model weights must be stored in the GPU during each training cycle, leaving only a certain amount of space available for the KV cache on the GPU. But the increasing size of the models mean that model weights take up more space while KV caches also require more and more GPU space for increased efficiency. As such, there is a bottleneck for the available space in the GPU.
+				However, due to the sheer amount of KV cache generated during inference, the offloading of KV cache onto the CPU becomes a new bottleneck in power and performance: 
+				what originally was data movement within the GPU now requires extra time and power in moving immense amounts of KV cache back to the CPU to continue token generation. 
+				Because token generation occurs in the GPU, the model weights must be stored in the GPU during each training cycle, leaving only a certain amount of space available 
+				for the KV cache on the GPU. But the increasing size of the models mean that model weights take up more space while KV caches also require more and more GPU space 
+				for increased efficiency. As such, there is a bottleneck for the available space in the GPU.
 				<br><br>
 				To face this great bottleneck, researchers have developed different KV cache offloading strategies to hide the induced latency. 
 
@@ -298,7 +310,7 @@
 			<div class="margin-left-block">
 			</div>
 		<div class="main-content-block">
-			<h1>Experiment Method</h1>
+			<h1>Experimental Method</h1>
 			We chose to design our experiment to fairly compare different scheduling strategies, which led us to take inspiration from the 
 			“zig-zag” scheduling described in ZvLLM <a href="#ZvLLM">[5]</a>. ZvLLM expands upon the two scheduling strategies mentioned in KVPR 
 			(namely, row-by-row and column-by-column) by generalizing the full column-by-column schedule as shown in Figure 2.
@@ -334,6 +346,77 @@
 			far exceeding the amounts we needed for our experiments.
 			<br><br>
 
+		</div>
+		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
+		</div>
+	</div>
+	<div class="content-margin-container" id="Discussion">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+			<h1>Discussion</h1>
+			Our results are significant because they show that there exists a scheduler which uses a specific number of zigzags which optimizes for the 
+			highest increase in marginal throughput for the lowest increase in marginal latency. This also means that we can customize the scheduler if 
+			a higher throughput is preferred over lower latency or lower latency over higher throughput. 
+			<br><br>
+			The observed relationship between latency and throughput also confirms that, for the schedules examined, the row-by-row schedule optimizes 
+			total latency while the column-by-column schedule optimizes both latency per sequence and total throughput. This confirms that the two extreme 
+			schedules are optimized for different metrics for all workloads. 
+			<br><br>
+		</div>
+		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
+		</div>
+	</div>
+	<div class="content-margin-container" id="Limitations">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+			<h1>Limitations</h1>
+			While our analysis provides a deeper investigation into the tradeoffs between latency and throughput, we are limited by the size and complexity 
+			of the models that we can use. Due to limitations in memory and compute available to us, we could not gather reliable data for sequences larger than 64. 
+			In state-of-the-art models, the number of sequences used in training are generally as large as possible to reduce variabilities and speed up training, 
+			but we are unable to investigate at that scale.
+			<br><br>
+			Because our prompt size and generation size are both relatively small, being only on the magnitudes of hundreds to thousands of tokens, the size of our 
+			KV cache is not extremely large, meaning we don’t face as many issues due to memory. In real-world applications, GPU memory space is extremely precious, 
+			and solutions must be implemented to efficiently utilize this memory. Since memory is not such an important bottleneck in our model, we have the liberty 
+			to only implement scheduling methods without needing to implement other forms of KV cache offloading. This, of course, doesn’t necessarily reflect state-of-the-art 
+			training paradigm, where scheduling would have to be adjusted around other more necessary methods to reduce the strain on the GPU. 
+			<br><br>
+		</div>
+		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
+		</div>
+	</div>
+	<div class="content-margin-container" id="Future Work">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+			<h1>Future Work</h1>
+			While we only looked at the latency and throughput metrics, there are also other metrics that we can aim to optimize in order to speed up training times. 
+			For instance, Total Kernel Launch and Queuing Time (TKLQT) describes the total time that is wasted in the communication between the CPU and GPU, lost either 
+			due to kernel launching time in the CPU as the stored kernels are sent to the GPU, or due to queuing in the GPU where the GPU running capacity cannot keep 
+			up with CPU commands <a href="#TKLQT">[6]</a>. TKLQT indicates the PU-boundness of a system and workload, letting the user know if most of the stalling is 
+			due to the CPU or GPU operation durations.
+			<br><br>
+			We also only explored schedules that contained fixed-sized blocks of column-by-column subschedules. Future work can explore schedules that vary the block 
+			sizes within a schedule. These schedules will explore a new dimension of timing: when in the inference would big zigzag blocks be useful? Patterns of zigzag 
+			blocks may reveal a hidden optimal schedule for latency or throughput. 
+			<br><br>
+			We can also further investigate the effects of zigzag on asymmetric GPU-CPU pipelining, an offloading strategy that involves splitting each batch into sub-batches, 
+			computing a sub-batch’s decoding of attention and KV caching in the CPU, and the other sub-batch in the GPU <a href="#NEO">[7]</a>. This presents an interesting prospect, 
+			where we may be able to investigate the magnitude to which scheduling affects the latency and throughput in GPU as compared to the CPU. We would expect an insignificant 
+			result in the CPU due to computations being in series, compared to the significant improvements in the parallelized GPUs, but it would nonetheless be a question to investigate.
+			<br><br>
+			We’ve also noted that the KV cache size reaches fairly large numbers as we increase the prompt and generation lengths, reaching around 20 GB, and if we continue increasing 
+			these parameters it could cause the CPU memory to run out for large enough workloads. An area of KV cache offloading strategies is dedicated towards studying exactly 
+			these extreme cases, like multi-turn dialogues with chatbots, where there isn’t enough storage even on the CPU DRAM. These strategies explore storing KV cache in multiple 
+			layers of the CPU: DRAM, SSD, and Disk <a href="FlashGen">[8]</a>. With new levels, there are more opportunities to experiment with different combinations of schedules. With speculation on 
+			how often KV cache is loaded back from the different levels, we expect schedules with lower latencies to be prioritized near the DRAM and schedules that optimize throughput to be closer to the disk.
+			<br><br>
+			Another major area of KV cache offloading strategies that we have not explored is reducing the size of KV cache saved and moved used in token generation through sacrificing the quality of the output. 
+			The 3 main strategies in current literature to reduce KV cache size are compression, quantization, and pruning various sizes and parts of KV cache <a href="Rocket">[9]</a><a href="A2ATS">[10]</a>. In combination with exploring the different patterned 
+			schedules, pairing different KV cache reduction strategies may reduce the latency and increase throughput in all types of scheduling, and investigating the relation between those two approaches could 
+			be another area to look into.
 		</div>
 		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
 		</div>
@@ -381,9 +464,14 @@
 								KVCache Offloading via Algorithm-System Co-Design</a>, Yi et al., 2025<br><br>
 							<a id="ASnyc"></a>[3] <a href="https://arxiv.org/pdf/2504.06319">Accelerating LLM Inference Throughput
 								via Asynchronous KV Cache Prefetching</a>, Dong et al., 2025<br><br>
-							<a id="KVPR"></a>[4] <a href="https://arxiv.org/pdf/2411.17089">KVPR: Efficient LLM Inference with I/O-Aware KV Cache Partial Recomputation</a>, Jiang et al., 2025<br><br>
+							<a id="KVPR"></a>[4] <a href="https://arxiv.org/pdf/2411.17089">KVPR: Efficient LLM Inference with I/O-Aware KV Cache Partial Recomputation</a>, Jiang Chaoyi et al., 2025<br><br>
 							<a id="ZvLLM"></a>[5] <a href="https://adiprerepa.github.io/data/598final.pdf">ZvLLM: Zigzag forward pass with vLLM</a>, Zhu et al., 2025<br><br>
-							<a id="ref_2"></a>[2] <a href="">A Human-Level AGI</a>, OpenAI, 2025<br><br>
+							<a id="TKLQT"></a>[6] <a href="https://arxiv.org/pdf/2504.11750">Characterizing and Optimizing LLM Inference
+								Workloads on CPU-GPU Coupled Architectures</a>, Vellaisamy et al., 2025<br><br>
+							<a id="NEO"></a>[7] <a href="https://yangzhou1997.github.io/paper/neo_mlsys25.pdf?utNEO:%20SAVING%20GPU%20MEMORY%20CRISIS%20WITH%20CPU%20OFFLOADING%20FOR%20ONLINE%20LLM%20INFERENCE">NEO: Saving GPU Memory Crisis With CPU Offloading For Online LLM Inference</a>, Jiang Xuanlin et al., 2025<br><br>
+							<a id="FlashGen"></a>[8] <a href="https://dl.acm.org/doi/pdf/10.1145/3676641.3716245">Accelerating LLM Serving for Multi-turn Dialogues with Efficient Resource Management</a>, Jinwoo Jeong and Jeongseob Ahn, 2025<br><br>
+							<a id="Rocket"></a>[9] <a href="https://arxiv.org/html/2502.14051v2">RocketKV: Accelerating Long-Context LLM Inference via Two-Stage KV Cache Compression</a>, Behnam et al., 2025<br><br>
+							<a id="A2ATS"></a>[10] <a href="https://arxiv.org/abs/2502.12665">A<sup>2</sup>ATS: Retrieval-Based KV Cache Reduction via Windowed Rotary Position Embedding and Query-Aware Vector Quantization</a>, He et al., 2025<br><br>
 						</div>
 		    </div>
 		    <div class="margin-right-block">
