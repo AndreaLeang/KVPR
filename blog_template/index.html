@@ -226,6 +226,7 @@
               <b style="font-size:16px">Outline</b><br><br>
               <a href="#intro">Introduction</a><br><br>
               <a href="#kv_cache_offloading_strategies">KV Cache Offloading Strategies</a><br><br>
+			  <a href="#Experiment_Method">Experimental Method</a><br><br>
               <a href="#Discussion">Discussion</a><br><br>
 			  <a href="#Limitations">Limitations</a><br><br>
 			  <a href="#Future Work">Future Work</a><br><br>
@@ -306,7 +307,7 @@
 		    </div>
 		</div>
 
-		<div class="content-margin-container" id="Experiment Method">
+		<div class="content-margin-container" id="Experiment_Method">
 			<div class="margin-left-block">
 			</div>
 		<div class="main-content-block">
@@ -339,7 +340,7 @@
 			<br><br>
 			During our initial experiments, we kept the total number of prompts, prompt length, generation length, and other parameters of KVPR fixed, 
 			effectively only changing the number of blocks and block size with each test. We run these experiments over several different values for 
-			the number of sequences (8, 16, 32, 64) and record the latency and throughput. In section we then look at the results when varying other 
+			the number of sequences (8, 16, 32, 64) and record the latency and throughput. In the next section, we then look at the results when varying other 
 			parameters like prompt and generation length, to see if any initial trends we observed stay consistent. 
 			<br><br>
 			All experiments were run on Google Collab Pro using an A100 GPU, on the high RAM option, which typically has around 80-90 GB, 
@@ -350,6 +351,38 @@
 		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
 		</div>
 	</div>
+
+	<div class="content-margin-container" id="Experiment_Results">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+			<h1>Experiment Results</h1>
+			Through the design of our experiment, our baseline values for KVPR’s pure column-by-column and row-by-row schedules are the integrated 
+			in trials where the GPU batch size is 1 (every batch is included in the block) and where the CPU batch size is the number of prompts 
+			(every prompt is in its own batch).
+			<br><br>
+			As we can see from Figure, the latency for one sequence goes up as the batch size increases, and conversely the throughput goes up. 
+			This matches with the expectation from KVPR paper, where the extreme cases of column-by-column scheduling and row-by-row scheduling 
+			yielded the highest throughput and lowest latency respectively. 
+			<br><br>
+			However, the additional inclusion of results for intermediate batch sizes allows us to analyze a clearer relationship between latency 
+			and throughput with our zigzag blocks. In particular, we observe a sub-logarithmic growth for throughput as a 
+			function of batch size, while latency per sequence appears to have a roughly linear growth (note the exponential growth for 
+			batch sizes along this x-axis, so the linear growth looks exponential in the figure). This latter effect results from the fact that 
+			total latency tends to follow a roughly constant, slightly decaying trend with respect to batch size. This is because batching in larger 
+			sections allows us to load more KV caches at once, which effectively saves overall time. However, the tradeoff is that each individual 
+			sequence is significantly slower (and roughly inversely proportional to the batch size), since only a decreasing proportion of the total 
+			GPU resources can be devoted to processing that particular sequence.
+			<br><br>
+			Additionally, as we look at different values for the number of sequences considered, the change in total latency as batch size increases tends to become more extreme when the number of sequences goes up. This is because we only need to load model weights onto the GPU once per batch, so the number of times we do this load is proportional to the batch size. For example, as we go from batch size one (i.e., row-by-row scheduling) to batch size two, the number of model weight loadings goes from N to N / 2, where N is the total number of sequences; so the improvement in total latency resulting from this improvement is proportional to N. Because the model weights are relatively large in memory, the effect this has on the overall latency is large, and this trend is reflected in latency_improvement.jpg, where we can observe a roughly linear relationship between N and the improvement in latency when going from batch size of one to batch size of two.
+			
+
+		</div>
+		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
+		</div>
+	</div>
+	
+
 	<div class="content-margin-container" id="Discussion">
 			<div class="margin-left-block">
 			</div>
