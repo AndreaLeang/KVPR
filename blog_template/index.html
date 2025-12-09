@@ -285,7 +285,10 @@
 					</center>
 
 					<br><br>
-					A further improvement on KV caching involves loading part of the KV cache onto the GPU, while simultaneously recomputing the rest of the cache. This has the benefit of avoiding GPU idle time, when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in [KVPR, Both]. In this blog, we will expand on the approach taken in the KVPR paper, which has a schedule-independent improvement; with this predictable KV cache offloading strategy as a basis, we can explore the influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules. 
+					A further improvement on KV caching involves loading part of the KV cache onto the GPU, while simultaneously recomputing the rest of the cache. This has the benefit of avoiding GPU idle time, 
+					when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in [KVPR, Both].
+					 In this blog, we will expand on the approach taken in the KVPR paper, which has a schedule-independent improvement; with this predictable KV cache offloading strategy as a basis, we can explore the
+					 influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules. 
 
 					
           
