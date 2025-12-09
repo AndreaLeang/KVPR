@@ -227,6 +227,7 @@
               <a href="#intro">Introduction</a><br><br>
               <a href="#kv_cache_offloading_strategies">KV Cache Offloading Strategies</a><br><br>
 			  <a href="#Experiment_Method">Experimental Method</a><br><br>
+			  <a href="#Experiment_Results">Experiment Results</a><br><br>
               <a href="#Discussion">Discussion</a><br><br>
 			  <a href="#Limitations">Limitations</a><br><br>
 			  <a href="#Future Work">Future Work</a><br><br>
@@ -361,9 +362,15 @@
 			in trials where the GPU batch size is 1 (every batch is included in the block) and where the CPU batch size is the number of prompts 
 			(every prompt is in its own batch).
 			<br><br>
-			As we can see from Figure, the latency for one sequence goes up as the batch size increases, and conversely the throughput goes up. 
-			This matches with the expectation from KVPR paper, where the extreme cases of column-by-column scheduling and row-by-row scheduling 
+			As we can see from Figure 3, the latency for one sequence goes up as the batch size increases, and conversely the throughput goes up. 
+			This matches with the expectation from KVPR <a href="#KVPR">[4]</a>, where the extreme cases of column-by-column scheduling and row-by-row scheduling 
 			yielded the highest throughput and lowest latency respectively. 
+
+			<center>
+				<img src="./images/combined_3_bars.png" />
+				Figure 3: Latency and Throughput vs. Batch Size for Different Number of Total Prompts 
+			</center>
+
 			<br><br>
 			However, the additional inclusion of results for intermediate batch sizes allows us to analyze a clearer relationship between latency 
 			and throughput with our zigzag blocks. In particular, we observe a sub-logarithmic growth for throughput as a 
@@ -374,8 +381,18 @@
 			sequence is significantly slower (and roughly inversely proportional to the batch size), since only a decreasing proportion of the total 
 			GPU resources can be devoted to processing that particular sequence.
 			<br><br>
-			Additionally, as we look at different values for the number of sequences considered, the change in total latency as batch size increases tends to become more extreme when the number of sequences goes up. This is because we only need to load model weights onto the GPU once per batch, so the number of times we do this load is proportional to the batch size. For example, as we go from batch size one (i.e., row-by-row scheduling) to batch size two, the number of model weight loadings goes from N to N / 2, where N is the total number of sequences; so the improvement in total latency resulting from this improvement is proportional to N. Because the model weights are relatively large in memory, the effect this has on the overall latency is large, and this trend is reflected in latency_improvement.jpg, where we can observe a roughly linear relationship between N and the improvement in latency when going from batch size of one to batch size of two.
-			
+			Additionally, as we look at different values for the number of sequences considered, the change in total latency as batch size increases 
+			tends to become more extreme when the number of sequences goes up. This is because we only need to load model weights onto the GPU once 
+			per batch, so the number of times we do this load is proportional to the batch size. For example, as we go from batch size one (i.e., 
+			row-by-row scheduling) to batch size two, the number of model weight loadings goes from N to N / 2, where N is the total number of 
+			sequences; so the improvement in total latency resulting from this improvement is proportional to N. Because the model weights are 
+			relatively large in memory, the effect this has on the overall latency is large, and this trend is reflected in Figure 4, 
+			where we can observe a roughly linear relationship between N and the improvement in latency when going from batch size of one to batch size of two.
+			<br><br>
+			<center>
+				<img src="./images/latency_improvement.jpg" width="512px"/>
+				Figure 4: Latency Improvement vs. Total Number of Prompts 
+			</center>
 
 		</div>
 		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
