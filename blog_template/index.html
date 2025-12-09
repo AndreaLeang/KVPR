@@ -248,13 +248,13 @@
 				Large language models (LLMs) are deep learning models that often utilize self-attention, where generating a single token requires attending to all previously 
 				generated tokens <a href="#Viswani">[1]</a>. This generally requires quadratic computation complexity due to 
 				having to revisit previous tokens. As the number of tokens generated increases, the memory and time required 
-				to generate the next token becomes a significant problem in the training and testing process of LLMs.
+				to generate the next token becomes a significant problem in the process of testing LLMs.
 				<br><br>
-				The demands on LLMs have grown non-stop: faster results, longer answers, and harder problems. To accommodate the appetite of the masses, current models and 
-				the contexts they are given have been growing exponentially in size. The increased model sizes allow for more minute details to be finetuned. The longer contexts 
+				And the demands on LLMs have grown continuously: faster results, longer answers, and harder problems. To accommodate the appetite of the masses, current models and 
+				the contexts they are given have been growing exponentially in size. The increased model sizes allow for more minute details to be fine-tuned. The longer contexts 
 				come from the increased amount of information needed to solve the harder problems and the long back and forth chats, where the model is expected to remember every 
 				detail of what has been said so far. The amount of shared memory between prompts also increases to help the models speed up computation, allowing them to transfer 
-				less information during training.
+				less information during inference.
 				<br><br>
 				With their immense growing sizes, the model, its context/prompts, and the subsequently generated values can no longer all fit on a single GPU. Real-world models 
 				are now shifting towards a “heterogeneous” solution, where part of the data is saved on the CPU and moved to the GPU as needed. 
@@ -264,7 +264,7 @@
 				<br><br>
 				However, due to the sheer amount of KV cache generated during inference, the offloading of KV cache onto the CPU becomes a new bottleneck in power and performance: 
 				what originally was data movement within the GPU now requires extra time and power in moving immense amounts of KV cache back to the CPU to continue token generation. 
-				Because token generation occurs in the GPU, the model weights must be stored in the GPU during each training cycle, leaving only a certain amount of space available 
+				Because token generation occurs in the GPU, the model weights must be stored in the GPU during each inference cycle, leaving only a certain amount of space available 
 				for the KV cache on the GPU. But the increasing size of the models mean that model weights take up more space while KV caches also require more and more GPU space 
 				for increased efficiency. As such, there is a bottleneck for the available space in the GPU.
 				<br><br>
@@ -300,7 +300,7 @@
 
 					<br><br>
 					A further improvement on KV caching involves loading part of the KV cache onto the GPU, while simultaneously recomputing the rest of the cache. This has the benefit of avoiding GPU idle time, 
-					when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in [KVPR, Both].
+					when the CPU is loading the KV cache onto the GPU, as the GPU can now by computing values during this timeframe and thus reducing the effective latency. This approach is described in <a href="#KVPR">[4]</a>.
 					 In this blog, we will expand on the approach taken in the KVPR paper, which has a schedule-independent improvement; with this predictable KV cache offloading strategy as a basis, we can explore the
 					 influence of different KV cache offloading schedules on the final performance and the relationship between the throughput and latency for different schedules. 
 
@@ -345,8 +345,8 @@
 			the number of sequences (8, 16, 32, 64) and record the latency and throughput. In the next section, we then look at the results when varying other 
 			parameters like prompt and generation length, to see if any initial trends we observed stay consistent. 
 			<br><br>
-			All experiments were run on Google Collab Pro using an A100 GPU, on the high RAM option, which typically has around 80-90 GB, 
-			far exceeding the amounts we needed for our experiments.
+			All experiments were run on Google Colab Pro using an A100 GPU, on the high RAM option, which has more than sufficient RAM compared to
+			the amounts we needed for our experiments.
 			<br><br>
 
 		</div>
@@ -359,11 +359,10 @@
 			</div>
 		<div class="main-content-block">
 			<h1>Experiment Results</h1>
-			Through the design of our experiment, our baseline values for KVPR’s pure column-by-column and row-by-row schedules are the integrated 
-			in trials where the GPU batch size is 1 (every batch is included in the block) and where the CPU batch size is the number of prompts 
-			(every prompt is in its own batch).
+			Through the design of our experiment, our baseline values for KVPR’s pure column-by-column and row-by-row schedules are results corresponding
+			to a batch size of N and 1 respectively, where N is the number of sequences generated.
 			<br><br>
-			As we can see from Figure 3, the latency for one sequence goes up as the batch size increases, and conversely the throughput goes up. 
+			As we can see from Figure 3, the latency for each sequence goes up as the batch size increases but so does the overall throughput. 
 			This matches with the expectation from KVPR <a href="#KVPR">[4]</a>, where the extreme cases of column-by-column scheduling and row-by-row scheduling 
 			yielded the highest throughput and lowest latency respectively. 
 
@@ -401,7 +400,7 @@
 			prompt length does, but it is mostly independent of generation length. This is because throughput heavily depends on prompt length, since 
 			the prompt length is significantly larger than generation length and as such it is the primary factor in KV cache size, which affects the 
 			throughput here. Additionally, because throughput is tokens generated per second, increasing prompt length does not increase tokens generated 
-			while it does increase time, so throughput gets higher. In contrast, increasing generation length does not affect KV cache size by as much, 
+			while it does increase time, so throughput gets lower. In contrast, increasing generation length does not affect KV cache size by as much, 
 			and also increases the tokens generated in proportion to the time, so throughput is mostly constant.
 			<br><br>
 			<center>
@@ -432,13 +431,6 @@
 			processes on the same GPU. Because we did not have access to the whole GPU, there were differences between latency and throughput values proportional to 
 			how much of a GPU our jobs were assigned, even for trials with the same number of sequences. The smaller variances in these values recorded against the 
 			Colab results could also be due to the different GPUs’ computation capabilities, with the A100 being able to run processes faster in general.
-			Additionally, as we look at different values for the number of sequences considered, the change in total latency as batch size increases 
-			tends to become more extreme when the number of sequences goes up. This is because we only need to load model weights onto the GPU once 
-			per batch, so the number of times we do this load is proportional to the batch size. For example, as we go from batch size one (i.e., 
-			row-by-row scheduling) to batch size two, the number of model weight loadings goes from N to N / 2, where N is the total number of 
-			sequences; so the improvement in total latency resulting from this improvement is proportional to N. Because the model weights are 
-			relatively large in memory, the effect this has on the overall latency is large, and this trend is reflected in Figure 4, 
-			where we can observe a roughly linear relationship between N and the improvement in latency when going from batch size of one to batch size of two.
 			
 
 		</div>
@@ -454,12 +446,11 @@
 			</div>
 		<div class="main-content-block">
 			<h1>Discussion</h1>
-			Our results are significant because they show that there exists a scheduler which uses a specific number of zigzags which optimizes for the 
-			highest increase in marginal throughput for the lowest increase in marginal latency. This also means that we can customize the scheduler if 
-			a higher throughput is preferred over lower latency or lower latency over higher throughput. 
+			Our results demonstrate the tradeoffs between latency and throughput as our scheduling method varies, using the KVPR method. This allows
+			users to customize the scheduler depending on if a higher throughput or a lower latency is desired.
 			<br><br>
-			The observed relationship between latency and throughput also confirms that, for the schedules examined, the row-by-row schedule optimizes 
-			total latency while the column-by-column schedule optimizes both latency per sequence and total throughput. This confirms that the two extreme 
+			The observed relationship between latency and throughput also verifies that, for the schedules examined, the row-by-row schedule optimizes 
+			total per-sequence latency while the column-by-column schedule optimizes total latency and throughput, showing that the two extreme 
 			schedules are optimized for different metrics for all workloads. 
 			<br><br>
 		</div>
@@ -473,14 +464,14 @@
 			<h1>Limitations</h1>
 			While our analysis provides a deeper investigation into the tradeoffs between latency and throughput, we are limited by the size and complexity 
 			of the models that we can use. Due to limitations in memory and compute available to us, we could not gather reliable data for sequences larger than 64. 
-			In state-of-the-art models, the number of sequences used in training are generally as large as possible to reduce variabilities and speed up training, 
+			In state-of-the-art models, the number of sequences used in inference are generally as large as possible to reduce variabilities, 
 			but we are unable to investigate at that scale.
 			<br><br>
 			Because our prompt size and generation size are both relatively small, being only on the magnitudes of hundreds to thousands of tokens, the size of our 
 			KV cache is not extremely large, meaning we don’t face as many issues due to memory. In real-world applications, GPU memory space is extremely precious, 
 			and solutions must be implemented to efficiently utilize this memory. Since memory is not such an important bottleneck in our model, we have the liberty 
 			to only implement scheduling methods without needing to implement other forms of KV cache offloading. This, of course, doesn’t necessarily reflect state-of-the-art 
-			training paradigm, where scheduling would have to be adjusted around other more necessary methods to reduce the strain on the GPU. 
+			LLM paradigms, where scheduling would have to be adjusted around other more necessary methods to reduce the strain on the GPU. 
 			<br><br>
 		</div>
 		<div class="margin-right-block" style="transform: translate(0%, -100%);"> <!-- you can move the margin notes up and down with translate -->
@@ -491,7 +482,7 @@
 			</div>
 		<div class="main-content-block">
 			<h1>Future Work</h1>
-			While we only looked at the latency and throughput metrics, there are also other metrics that we can aim to optimize in order to speed up training times. 
+			While we only looked at the latency and throughput metrics, there are also other metrics that we can aim to optimize in order to speed up inference times. 
 			For instance, Total Kernel Launch and Queuing Time (TKLQT) describes the total time that is wasted in the communication between the CPU and GPU, lost either 
 			due to kernel launching time in the CPU as the stored kernels are sent to the GPU, or due to queuing in the GPU where the GPU running capacity cannot keep 
 			up with CPU commands <a href="#TKLQT">[6]</a>. TKLQT indicates the PU-boundness of a system and workload, letting the user know if most of the stalling is 
