@@ -395,7 +395,7 @@
 				Figure 4: Latency Improvement vs. Total Number of Prompts 
 			</center>
 			<br><br>
-			Furthermore, we can see in Figure 6 that the general trends of latency and throughput versus batch size does not depend on generation length 
+			Furthermore, we can see in Figure 5 that the general trends of latency and throughput versus batch size does not depend on generation length 
 			or scheduling length, so these results are applicable to a variety of different use cases. Any small variances can likely be attributed to 
 			physical hardware limitations and differences. We can also observe some other trends in this figure. The throughput tends to go down when 
 			prompt length does, but it is mostly independent of generation length. This is because throughput heavily depends on prompt length, since 
@@ -416,7 +416,7 @@
 			increase in latency there, but the significant increase in KV cache size caused by the longer prompt leads each layer to be slower by a sub-linear factor. 
 			<br><br>
 			Prior to using Google Colab to run our experiments, we tried to use MIT’s Engaging-On-Demand cluster, which also provides custom GPUs on which we can 
-			run our models. Figure 7 shows the results from using Engaging’s L40 GPUs. We observe similar trends to what we found on Colab: the latency per sequence 
+			run our models. Figure 6 shows the results from using Engaging’s L40 GPUs. We observe similar trends to what we found on Colab: the latency per sequence 
 			increases linearly with GPU batch size while throughput goes through a sub-logarithmic growth. However, we noticed there are inconsistencies in our 
 			results with Engaging. Between 16 and 32 sequences, we noticed that the average total latency actually went down, which does not make sense since more 
 			sequences would require more time to attend to and thus more latency. We also noticed that the general trend did not hold for 64 sequences, where the 
